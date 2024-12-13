@@ -1,6 +1,12 @@
 {
     "再见龙生，你好人生": {
         "rss_url": "https://mikanani.me/RSS/Bangumi?bangumiId=3442&subgroupid=370",
-        "download_dir": "H:/BT-Downloads/番剧/10月"
+        "download_dir": "H:/BT-Downloads/番剧/10月",
+        "items": []
+    },
+    "没能成为魔法师的女孩子的故事": {
+        "rss_url": "https://mikanani.me/RSS/Bangumi?bangumiId=3453&subgroupid=370",
+        "download_dir": "H:\\BT-Downloads\\番剧\\10月",
+        "items": []
     }
 }
