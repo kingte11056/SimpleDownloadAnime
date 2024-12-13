@@ -15,7 +15,6 @@ CONFIG_FILE_NAME = "subscriptions.json"  # 配置文件名称
 
 DEFAULT_PROXY = "socks5h://127.0.0.1:10808"  # 默认代理地址
 
-
 # 读取配置文件
 def load_config():
     if os.path.exists(CONFIG_FILE_NAME):
@@ -26,7 +25,6 @@ def load_config():
             print(f"Failed to load config file: {e}")
     return {}
 
-
 # 保存配置文件
 def save_config(config):
     try:
@@ -34,7 +32,6 @@ def save_config(config):
             json.dump(config, f, ensure_ascii=False, indent=4)
     except Exception as e:
         print(f"Failed to save config file: {e}")
-
 
 # 获取 RSS 链接内容
 def get_rss_data(rss_url, proxies):
@@ -46,30 +43,11 @@ def get_rss_data(rss_url, proxies):
         print(f"Failed to retrieve RSS feed: {e}")
         return None
 
-
-# 更新已下载的种子信息
-def update_downloaded_info(config, anime_name, magnet_links):
-    for link in magnet_links:
-        if 'description' in link:
-            # 添加新的下载信息
-            downloaded_info = {
-                "title": link["title"],
-                "description": link["description"],
-                "url": link["url"]
-            }
-            if anime_name in config:
-                if "downloaded" not in config[anime_name]:
-                    config[anime_name]["downloaded"] = []
-                config[anime_name]["downloaded"].append(downloaded_info)
-                save_config(config)
-
-
 # 连接到 qBittorrent
 def connect_to_qb(qb_url, qb_username, qb_password):
     qb = Client(qb_url)
     qb.auth_log_in(qb_username, qb_password)
     return qb
-
 
 # 解析 RSS 获取磁力链接和番剧集信息
 def get_magnet_links(rss_data):
@@ -90,7 +68,6 @@ def get_magnet_links(rss_data):
 
     return items
 
-
 # 将磁力链接添加到 qBittorrent
 def add_magnets_to_qb(magnet_links, folder_name, qb, download_dir):
     folder_path = os.path.join(download_dir, folder_name)
@@ -99,7 +76,6 @@ def add_magnets_to_qb(magnet_links, folder_name, qb, download_dir):
     for magnet in magnet_links:
         qb.torrents_add(urls=magnet['url'], savepath=folder_path)
         print(f"Added magnet link to qBittorrent: {magnet['title']}")
-
 
 # 主处理函数
 def start_download(qb_url, qb_username, qb_password, download_dir, proxy, rss_url, selected_items):
@@ -125,7 +101,6 @@ def start_download(qb_url, qb_username, qb_password, download_dir, proxy, rss_ur
     else:
         messagebox.showwarning("No Torrents", "No torrents selected for download.")
 
-
 # 显示番剧的种子信息
 def show_torrent_selection_window(rss_data, rss_url, download_dir):
     # 获取RSS数据中的所有种子
@@ -134,16 +109,37 @@ def show_torrent_selection_window(rss_data, rss_url, download_dir):
     # 创建新的窗口显示种子信息
     selection_window = tk.Toplevel()
     selection_window.title("选择要下载的种子")
-    selection_window.geometry("500x400")
+    selection_window.geometry("1080x720")  # 更大的窗口大小，适应1080p显示
 
-    # 创建一个字典用于保存每个种子的选择状态
-    var_dict = {}
+    # 创建滚动条和画布容器
+    canvas = tk.Canvas(selection_window)
+    scrollbar = tk.Scrollbar(selection_window, orient="vertical", command=canvas.yview)
+    canvas.config(yscrollcommand=scrollbar.set)
+
+    # 创建一个frame来放入所有种子条目
+    frame = tk.Frame(canvas)
 
     # 创建复选框列表，供用户选择下载的种子
+    var_dict = {}
     for item in items:
         var = tk.BooleanVar()
         var_dict[item["title"]] = var
-        tk.Checkbutton(selection_window, text=item["title"], variable=var).pack(anchor="w")
+        checkbox = tk.Checkbutton(frame, text=item["title"], variable=var)
+        checkbox.pack(anchor="w", padx=10, pady=2)
+
+    # 将frame放入canvas中
+    canvas.create_window((0, 0), window=frame, anchor="nw")
+
+    # 配置滚动条
+    scrollbar.config(command=canvas.yview)
+
+    # 打包Canvas和Scrollbar
+    canvas.pack(side="left", fill="both", expand=True)
+    scrollbar.pack(side="right", fill="y")
+
+    # 更新滚动区域大小
+    frame.update_idletasks()
+    canvas.config(scrollregion=canvas.bbox("all"))
 
     # 点击按钮下载选中的种子
     def download_selected():
@@ -158,8 +154,8 @@ def show_torrent_selection_window(rss_data, rss_url, download_dir):
         else:
             messagebox.showwarning("No Selection", "Please select at least one item to download.")
 
+    # 添加“开始下载”按钮
     tk.Button(selection_window, text="开始下载", command=download_selected).pack(pady=10)
-
 
 # 创建图形化界面
 def create_gui():
