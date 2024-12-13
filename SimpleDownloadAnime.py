@@ -68,6 +68,23 @@ def get_magnet_links(rss_data):
 
     return items
 
+
+# 提取番剧名字
+def get_folder_name(rss_data):
+    tree = ET.ElementTree(ET.fromstring(rss_data))
+    root = tree.getroot()
+
+    # 提取 channel/title 作为番剧名字
+    channel_title = root.find(".//channel/title")
+    if channel_title is not None:
+        title_text = channel_title.text
+        # 假设 "Mikan Project - " 是固定前缀
+        folder_name = title_text.replace("Mikan Project - ", "").strip()
+        return folder_name
+    return "未命名番剧"
+
+
+
 # 将磁力链接添加到 qBittorrent
 def add_magnets_to_qb(magnet_links, folder_name, qb, download_dir):
     folder_path = os.path.join(download_dir, folder_name)
@@ -96,7 +113,7 @@ def start_download(qb_url, qb_username, qb_password, download_dir, proxy, rss_ur
         qb = connect_to_qb(qb_url, qb_username, qb_password)
 
         # 将磁力链接添加到 qBittorrent
-        add_magnets_to_qb(selected_magnets, "下载", qb, download_dir)
+        add_magnets_to_qb(selected_magnets, get_folder_name(rss_data), qb, download_dir)
         messagebox.showinfo("Success", f"Successfully added {len(selected_magnets)} torrents to qBittorrent.")
     else:
         messagebox.showwarning("No Torrents", "No torrents selected for download.")
@@ -158,6 +175,7 @@ def show_torrent_selection_window(rss_data, rss_url, download_dir):
     tk.Button(selection_window, text="开始下载", command=download_selected).pack(pady=10)
 
 # 创建图形化界面
+# 创建图形化界面
 def create_gui():
     # 创建主窗口
     root = tk.Tk()
@@ -171,10 +189,10 @@ def create_gui():
 
     # 输入框：RSS URL 和下载目录
     def set_rss_and_dir():
-        rss_url = simpledialog.askstring("设置", "请输入 RSS 地址:")
-        download_dir = simpledialog.askstring("设置", "请输入下载目录:")
+        rss_url = simpledialog.askstring("设置", "请输入 RSS 地址:", initialvalue=config.get('rss_url', ''))
+        download_dir = simpledialog.askstring("设置", "请输入下载目录:", initialvalue=config.get('download_dir', ''))
         if rss_url and download_dir:
-            name = simpledialog.askstring("设置", "请输入番剧名称:")
+            name = simpledialog.askstring("设置", "请输入番剧名称:", initialvalue=config.get('name', ''))
             if name and name not in config:
                 config[name] = {
                     "rss_url": rss_url,
@@ -214,9 +232,34 @@ def create_gui():
                 if rss_data:
                     show_torrent_selection_window(rss_data, details["rss_url"], details['download_dir'])
 
+    # 创建一个 Canvas 和 Scrollbar 来显示支持滚动的 RSS 列表
+    canvas_frame = tk.Frame(root)
+    canvas_frame.pack(pady=10, fill="both", expand=True)
+
+    canvas = tk.Canvas(canvas_frame)
+    scrollbar = tk.Scrollbar(canvas_frame, orient="vertical", command=canvas.yview)
+    canvas.config(yscrollcommand=scrollbar.set)
+
+    # 创建一个 Frame 来包含 Listbox 和其他内容
+    listbox_frame = tk.Frame(canvas)
+
     # 番剧列表
-    listbox = tk.Listbox(root, height=20, width=70)
+    listbox = tk.Listbox(listbox_frame, height=20, width=70)
     listbox.pack(pady=10)
+
+    # 将 listbox_frame 放入 canvas 中
+    canvas.create_window((0, 0), window=listbox_frame, anchor="nw")
+
+    # 配置滚动条
+    scrollbar.config(command=canvas.yview)
+
+    # 打包 Canvas 和 Scrollbar
+    canvas.pack(side="left", fill="both", expand=True)
+    scrollbar.pack(side="right", fill="y")
+
+    # 更新滚动区域大小
+    listbox_frame.update_idletasks()
+    canvas.config(scrollregion=canvas.bbox("all"))
 
     refresh_anime_list()
 
