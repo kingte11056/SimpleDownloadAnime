@@ -3,7 +3,8 @@
 这是一个基于 **NiceGUI** 开发的轻量化番剧订阅管理工具。它集成了 Mikan Project 的 RSS 订阅功能，支持一键推送至 qBittorrent 自动下载，并可直接调用本地播放器观影。
 
 ---
-
+## 🛠️ 效果图
+![img.png](img.png)
 ## 🚀 核心功能
 
 * **顶部快捷栏**：集成“检查资源更新”与“关闭服务”按钮，操作触手可及。
@@ -42,8 +43,7 @@ DEFAULT_QB_PASSWORD = ''
     * `DEFAULT_PROXY`: 必须配置。由于 Mikan 官网访问限制，请填写您的本地代理地址（如 `socks5h://127.0.0.1:10808`）。
     * `DEFAULT_QB_URL`: qBittorrent 的 WebUI 地址，默认为 `http://127.0.0.1:8080`。
     * `DEFAULT_QB_USERNAME/PASSWORD`: 您的 qB 登录凭据，若未设置密码可留空。
-## 🛠️ 效果图
-![img.png](img.png)
+
 
 
 
