@@ -307,4 +307,4 @@ class MikanWebUI:
 
 if __name__ in {"__main__", "__mp_main__"}:
     app = MikanWebUI()
-    ui.run(title='Mikan Manager Pro', native=True, window_size=(1450, 950), port=8105)
+    ui.run(title='番剧管理器', native=True, window_size=(1450, 950), port=8105)

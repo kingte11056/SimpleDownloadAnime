@@ -1,14 +1,11 @@
-altgraph==0.17.4
-certifi==2024.8.30
-charset-normalizer==3.4.0
-idna==3.10
-importlib_metadata==8.5.0
-packaging==24.2
-pefile==2023.2.7
-pyinstaller==6.11.1
-pyinstaller-hooks-contrib==2024.10
-pywin32-ctypes==0.2.3
-qbittorrent-api==2024.11.70
-requests==2.32.3
-urllib3==2.2.3
-zipp==3.21.0
+# 核心 UI 框架
+nicegui>=1.4.0
+
+# 网络请求与数据处理
+requests>=2.31.0
+
+# qBittorrent 联动
+qbittorrent-api>=2024.1.1
+
+# 异步运行支持（Python 标准库已包含，但在部分特殊环境可能需要显式声明）
+asyncio
