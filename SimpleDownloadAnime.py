@@ -237,65 +237,60 @@ class MikanWebUI:
         for item in items:
             grouped.setdefault(item['group'], []).append(item)
 
-
-        with ui.dialog() as d, ui.card().classes('w-[2100px] max-w-[95vw] rounded-2xl p-0 overflow-hidden shadow-2xl'):
+        # 1600px 宽度适配，确保单窗口显示
+        with ui.dialog() as d, ui.card().classes(
+                'w-[1600px] max-w-[95vw] h-[90vh] rounded-2xl p-0 overflow-hidden shadow-2xl bg-slate-50'):
             # 顶部蓝色标题栏
-            with ui.row().classes('w-full bg-blue-700 p-5 text-white items-center no-wrap'):
-                ui.icon('cloud_download', size='32px')
-                ui.label('资源更新清单').classes('text-2xl font-black ml-2 flex-grow')  # 对应截图标题
+            with ui.row().classes('w-full bg-blue-700 p-6 text-white items-center no-wrap shadow-lg'):
+                ui.icon('cloud_download', size='36px')
+                with ui.column().classes('gap-0'):
+                    ui.label('资源更新清单').classes('text-2xl font-black ml-2 leading-none')
+                    ui.label(f'推送目录: {target_path}').classes('text-xs ml-2 opacity-80 mt-1')
+                ui.space()
+                ui.button(icon='close', on_click=d.close).props('flat round color=white')
 
             selected = set()
-            # 滚动区域
-            with ui.scroll_area().classes('h-[1000px] p-6 bg-slate-50'):
-                for group, sub_items in grouped.items():
-                    with ui.column().classes(
-                            'w-full mb-6 bg-white rounded-xl border border-blue-100 overflow-hidden shadow-sm'):
-                        # 字幕组名称栏
-                        ui.label(group).classes(
-                            'w-full bg-blue-50 px-6 py-2 font-black text-blue-900 border-b border-blue-100')
 
-                        for item in sub_items:
+            # 中间主内容滚动区
+            with ui.scroll_area().classes('flex-grow p-8'):
+                with ui.column().classes('w-full gap-6'):
+                    for group, sub_items in grouped.items():
+                        with ui.card().classes(
+                                'w-full p-0 rounded-xl border-2 border-slate-200 overflow-hidden shadow-sm'):
+                            # 字幕组分类头
                             with ui.row().classes(
-                                    'w-full items-center py-3 px-6 border-b border-slate-50 hover:bg-slate-50 transition-colors'):
-                                # 复选框
-                                ui.checkbox(
-                                    on_change=lambda e, u=item['url']: selected.add(u) if e.value else selected.discard(
-                                        u)
-                                ).props('dense')
-                                # 资源标题：使用 flex-grow 自动换行，防止横向撑开
-                                ui.label(item['title']).classes(
-                                    'text-sm flex-grow font-bold text-slate-800 ml-4 leading-relaxed')
+                                    'w-full bg-slate-100 px-6 py-3 items-center border-b-2 border-slate-200'):
+                                ui.icon('group', color='blue-900', size='20px')
+                                ui.label(group).classes('font-black text-blue-900 text-lg ml-2 tracking-tight')
+                                ui.badge(f'{len(sub_items)} 个资源').props('color=blue-100 text-color=blue-900').classes(
+                                    'ml-2 font-bold')
 
-            # 底部按钮栏
-            with ui.row().classes('w-full p-6 justify-end bg-white border-t gap-4'):
-                ui.button('取消', on_click=d.close).props('outline color=grey').classes('px-6 font-bold')
-                ui.button('确定推送', on_click=lambda: self.do_download(selected, target_path, d)).props(
-                    'unelevated color=blue').classes('px-10 font-black')
-        d.open()
-        grouped = {}
-        for item in items: grouped.setdefault(item['group'], []).append(item)
-        with ui.dialog() as d, ui.card().classes('w-[1100px] max-w-none rounded-2xl p-0 overflow-hidden shadow-2xl'):
-            with ui.row().classes('w-full bg-blue-700 p-5 text-white items-center'):
-                ui.icon('cloud_download', size='32px')
-                ui.label('选择要下载的集数 (将推送到 qB)').classes('text-2xl font-black ml-2')
+                            # 资源列表详情
+                            with ui.column().classes('w-full divide-y divide-slate-100'):
+                                for item in sub_items:
+                                    # 每一行资源
+                                    with ui.row().classes(
+                                            'w-full items-center py-4 px-8 hover:bg-blue-50 transition-colors cursor-pointer') as row:
+                                        # 修复报错：通过 e.value 手动控制选中
+                                        cb = ui.checkbox(
+                                            on_change=lambda e, u=item['url']: selected.add(
+                                                u) if e.value else selected.discard(u)
+                                        ).props('size=lg color=blue')
 
-            selected = set()
-            with ui.scroll_area().classes('h-[600px] p-8 bg-slate-50'):
-                for group, sub_items in grouped.items():
-                    with ui.column().classes('w-full mb-6 bg-white rounded-xl border border-blue-100 overflow-hidden'):
-                        ui.label(group).classes(
-                            'w-full bg-blue-50 px-6 py-2 font-black text-blue-900 border-b border-blue-100')
-                        for item in sub_items:
-                            with ui.row().classes('w-full items-center py-3 px-6 border-b border-slate-50'):
-                                ui.checkbox(
-                                    on_change=lambda e, u=item['url']: selected.add(u) if e.value else selected.discard(
-                                        u)).props('dense')
-                                ui.label(item['title']).classes('text-sm flex-grow font-bold text-slate-800 ml-4')
+                                        ui.label(item['title']).classes(
+                                            'text-base flex-grow font-bold text-slate-800 ml-4 leading-relaxed break-all')
 
-            with ui.row().classes('w-full p-6 justify-end bg-white border-t gap-4'):
-                ui.button('取消', on_click=d.close).props('outline')
-                ui.button('确定推送', on_click=lambda: self.do_download(selected, target_path, d)).props(
-                    'unelevated color=blue').classes('px-8 font-black')
+                                        # 修复 'toggle' 报错：改用直接修改 value 的方式
+                                        row.on('click', lambda c=cb: setattr(c, 'value', not c.value))
+
+            # 底部操作栏
+            with ui.row().classes('w-full p-6 justify-end bg-white border-t-2 border-slate-200 gap-6 shadow-md'):
+                ui.button('取消', on_click=d.close).props('outline color=grey-7').classes(
+                    'px-8 font-bold h-12 rounded-lg')
+                ui.button('确定推送至 qBittorrent', icon='send',
+                          on_click=lambda: self.do_download(selected, target_path, d)).props(
+                    'unelevated color=blue-7').classes('px-12 font-black h-12 rounded-lg text-lg shadow-md')
+
         d.open()
 
     def do_download(self, urls, path, dialog):
