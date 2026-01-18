@@ -45,5 +45,5 @@ DEFAULT_QB_PASSWORD = ''
    * 脚本会自动安装所需依赖。
    * 脚本会自动唤起浏览器并启动服务。
 
-```bash
-pip install nicegui requests qbittorrentapi
+
+

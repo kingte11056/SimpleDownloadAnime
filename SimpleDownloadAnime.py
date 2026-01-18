@@ -286,12 +286,34 @@ class MikanWebUI:
             ui.notify('搜索失败')
 
     def show_confirm_dialog(self, name, cover):
+        # --- 自动日期与季度逻辑 ---
+        now = datetime.datetime.now()
+        year = now.strftime('%Y')  # 获取当前年份，如 2026
+        month = now.month  # 获取当前月份数字
+
+        # 判断季度归档：1-3月归为01，4-6月归为04，7-9月归为07，10-12月归为10
+        if month <= 3:
+            quarter = "01"
+        elif month <= 6:
+            quarter = "04"
+        elif month <= 9:
+            quarter = "07"
+        else:
+            quarter = "10"
+
+        # 生成动态路径
+        dynamic_path = f"H:\\BT-Downloads\\番剧\\{year}\\{quarter}"
+        # -----------------------
+
         with ui.dialog() as d, ui.card().classes('w-[500px] p-8 rounded-2xl high-contrast-card shadow-2xl'):
             ui.label('确认新增订阅').classes('text-2xl font-black mb-4 text-primary anime-title')
             if cover: ui.image(cover).classes('w-full h-80 rounded-xl shadow-md mb-4 object-cover')
             ui.label(name).classes('font-black text-lg mb-6')
-            path_i = ui.input('下载路径', value=f"H:\\BT-Downloads\\番剧\\2026\\01").classes('w-full mb-8 font-bold').props(
+
+            # 使用动态生成的 dynamic_path 作为 value
+            path_i = ui.input('下载路径', value=dynamic_path).classes('w-full mb-8 font-bold').props(
                 'outlined rounded dense')
+
             ui.button('确认订阅', on_click=lambda: self.final_add(name, cover, path_i.value, d)).props(
                 'unelevated size=lg w-full').classes('font-black')
         d.open()
