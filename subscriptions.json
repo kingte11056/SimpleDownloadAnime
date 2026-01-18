@@ -1,27 +1,78 @@
 {
-    "再见龙生，你好人生": {
-        "rss_url": "https://mikanani.me/RSS/Bangumi?bangumiId=3442&subgroupid=370",
-        "download_dir": "H:/BT-Downloads/番剧/10月",
-        "items": []
+    "古诺希亚": {
+        "rss_url": "https://mikanani.me/RSS/Bangumi?bangumiId=3780&subgroupid=370",
+        "download_dir": "H:\\BT-Downloads\\番剧\\2026\\01",
+        "items": [],
+        "cover_url": "https://mikanani.me/images/Bangumi/202510/b5756bf3.jpg?width=400&height=560&format=webp",
+        "folder_name": "古诺希亚"
     },
-    "没能成为魔法师的女孩子的故事": {
-        "rss_url": "https://mikanani.me/RSS/Bangumi?bangumiId=3453&subgroupid=370",
-        "download_dir": "H:\\BT-Downloads\\番剧\\10月",
-        "items": []
+    "Fate/strange Fake": {
+        "rss_url": "https://mikanani.me/RSS/Bangumi?bangumiId=3503",
+        "download_dir": "H:\\BT-Downloads\\番剧\\2026\\01",
+        "items": [],
+        "folder_name": "Fate/strange Fake",
+        "cover_url": "https://mikanani.me/images/Bangumi/202501/06be31dd.jpg?width=400&height=560&format=webp"
     },
-    "听说你们要结婚": {
-        "rss_url": "https://mikanani.me/RSS/Bangumi?bangumiId=3468",
-        "download_dir": "H:\\BT-Downloads\\番剧\\10月",
-        "items": []
+    "完全相反的你和我": {
+        "rss_url": "https://mikanani.me/RSS/Bangumi?bangumiId=3849&subgroupid=34",
+        "download_dir": "H:\\BT-Downloads\\番剧\\2026\\01",
+        "items": [],
+        "folder_name": "相反的你和我",
+        "cover_url": "https://mikanani.me/images/Bangumi/202601/0f561b69.jpg?width=400&height=560&format=webp"
     },
-    "多数欠": {
-        "rss_url": "https://mikanani.me/RSS/Bangumi?bangumiId=3361&subgroupid=370",
-        "download_dir": "H:\\BT-Downloads\\番剧\\10月",
-        "items": []
+    "葬送的芙莉莲 第二季": {
+        "rss_url": "https://mikanani.me/RSS/Bangumi?bangumiId=3821&subgroupid=583",
+        "download_dir": "H:\\BT-Downloads\\番剧\\2026\\01",
+        "items": [],
+        "cover_url": "https://mikanani.me/images/Bangumi/202601/87a60922.jpg?width=400&height=560&format=webp"
     },
-    "成为名垂青史的反派大小姐吧 ": {
-        "rss_url": "https://mikanani.me/RSS/Bangumi?bangumiId=3423&subgroupid=370",
-        "download_dir": "H:\\BT-Downloads\\番剧\\10月",
-        "items": []
+    "魔都精兵的奴隶 第二季": {
+        "rss_url": "https://mikanani.me/RSS/Bangumi?bangumiId=3825&subgroupid=370",
+        "download_dir": "H:\\BT-Downloads\\番剧\\2026\\01",
+        "items": [],
+        "cover_url": "https://mikanani.me/images/Bangumi/202601/d25fb2da.jpg?width=400&height=560&format=webp"
+    },
+    "勇者之屑": {
+        "rss_url": "https://mikanani.me/RSS/Search?searchstr=%E5%8B%87%E8%80%85%E4%B9%8B%E5%B1%91",
+        "download_dir": "H:\\BT-Downloads\\番剧\\2026\\01",
+        "items": [],
+        "cover_url": "https://mikanani.me/images/Bangumi/202601/38b1ae51.jpg?width=400&height=560&format=webp",
+        "folder_name": "勇者之屑"
+    },
+    "安逸领主的愉快领地防卫": {
+        "rss_url": "https://mikanani.me/RSS/Search?searchstr=%E5%AE%89%E9%80%B8%E9%A2%86%E4%B8%BB%E7%9A%84%E6%84%89%E5%BF%AB%E9%A2%86%E5%9C%B0%E9%98%B2%E5%8D%AB",
+        "download_dir": "H:\\BT-Downloads\\番剧\\2026\\01",
+        "items": [],
+        "cover_url": "https://mikanani.me/images/Bangumi/202601/90685175.jpg?width=400&height=560&format=webp",
+        "folder_name": "安逸领主的愉快领地防卫"
+    },
+    "蘑菇魔女": {
+        "rss_url": "https://mikanani.me/RSS/Search?searchstr=%E8%98%91%E8%8F%87%E9%AD%94%E5%A5%B3",
+        "download_dir": "H:\\BT-Downloads\\番剧\\2026\\01",
+        "cover_url": "https://mikanani.me/images/Bangumi/202601/af608578.jpg?width=400&height=560&format=webp"
+    },
+    "厄里斯的圣杯": {
+        "rss_url": "https://mikanani.me/RSS/Search?searchstr=%E5%8E%84%E9%87%8C%E6%96%AF%E7%9A%84%E5%9C%A3%E6%9D%AF",
+        "download_dir": "H:\\BT-Downloads\\番剧\\2026\\01",
+        "cover_url": "https://mikanani.me/images/Bangumi/202601/0ad0c2d7.jpg?width=400&height=560&format=webp",
+        "folder_name": "厄里斯的圣杯"
+    },
+    "判处勇者刑 惩罚勇者9004队刑务纪录": {
+        "rss_url": "https://mikanani.me/RSS/Search?searchstr=%E5%88%A4%E5%A4%84%E5%8B%87%E8%80%85%E5%88%91%20%E6%83%A9%E7%BD%9A%E5%8B%87%E8%80%859004%E9%98%9F%E5%88%91%E5%8A%A1%E7%BA%AA%E5%BD%95",
+        "download_dir": "H:\\BT-Downloads\\番剧\\2026\\01",
+        "cover_url": "https://mikanani.me/images/Bangumi/202601/5174d0fa.jpg?width=400&height=560&format=webp",
+        "folder_name": "判处勇者刑 惩罚勇者9004队刑务纪录"
+    },
+    "午夜的倾心旋律": {
+        "rss_url": "https://mikanani.me/RSS/Search?searchstr=%E5%8D%88%E5%A4%9C%E7%9A%84%E5%80%BE%E5%BF%83%E6%97%8B%E5%BE%8B",
+        "download_dir": "H:\\BT-Downloads\\番剧\\2026\\01",
+        "cover_url": "https://mikanani.me/images/Bangumi/202601/887ba87e.jpg?width=400&height=560&format=webp",
+        "folder_name": "午夜的倾心旋律"
+    },
+    "我推的孩子 第三季": {
+        "rss_url": "https://mikanani.me/RSS/Search?searchstr=%E6%88%91%E6%8E%A8%E7%9A%84%E5%AD%A9%E5%AD%90%20%E7%AC%AC%E4%B8%89%E5%AD%A3",
+        "download_dir": "H:\\BT-Downloads\\番剧\\2026\\01",
+        "cover_url": "https://mikanani.me/images/Bangumi/202601/c180f722.jpg?width=400&height=560&format=webp",
+        "folder_name": "我推的孩子 第三季"
     }
 }

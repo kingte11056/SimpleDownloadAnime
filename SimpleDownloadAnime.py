@@ -1,279 +1,310 @@
-import requests
-import xml.etree.ElementTree as ET
-import qbittorrentapi
-from qbittorrentapi import Client
+import urllib.parse
+import datetime
 import os
-import tkinter as tk
-from tkinter import messagebox, filedialog, simpledialog
 import json
+import requests
+import re
+import subprocess
+import asyncio
+import xml.etree.ElementTree as ET
+from qbittorrentapi import Client
+from nicegui import ui, app as nicegui_app
 
-# 设置默认值
-DEFAULT_QB_URL = 'http://127.0.0.1:8080'  # qBittorrent Web UI 的 URL
-DEFAULT_QB_USERNAME = 'admin'  # qBittorrent Web UI 用户名
-DEFAULT_QB_PASSWORD = '1qaz2wsx'  # qBittorrent Web UI 密码
-CONFIG_FILE_NAME = "subscriptions.json"  # 配置文件名称
+# --- 基础配置 ---
+CONFIG_FILE = "subscriptions.json"
+DANDAN_PATH = r"D:\弹弹play\dandanplay.exe"
+POTPLAYER_PATH = r"D:\app\PotPlayer\PotPlayerMini64.exe"
+DEFAULT_PROXY = "socks5h://127.0.0.1:10808"
+DEFAULT_QB_URL = 'http://127.0.0.1:8080'
+DEFAULT_QB_USERNAME = ''
+DEFAULT_QB_PASSWORD = ''
 
-DEFAULT_PROXY = "socks5h://127.0.0.1:10808"  # 默认代理地址
 
-# 读取配置文件
 def load_config():
-    if os.path.exists(CONFIG_FILE_NAME):
+    if os.path.exists(CONFIG_FILE):
         try:
-            with open(CONFIG_FILE_NAME, 'r', encoding='utf-8') as f:
+            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
-        except Exception as e:
-            print(f"Failed to load config file: {e}")
+        except:
+            return {}
     return {}
 
-# 保存配置文件
+
 def save_config(config):
-    try:
-        with open(CONFIG_FILE_NAME, 'w', encoding='utf-8') as f:
-            json.dump(config, f, ensure_ascii=False, indent=4)
-    except Exception as e:
-        print(f"Failed to save config file: {e}")
-
-# 获取 RSS 链接内容
-def get_rss_data(rss_url, proxies):
-    try:
-        response = requests.get(rss_url, proxies=proxies)
-        response.raise_for_status()  # 确保请求成功
-        return response.text
-    except requests.RequestException as e:
-        print(f"Failed to retrieve RSS feed: {e}")
-        return None
-
-# 连接到 qBittorrent
-def connect_to_qb(qb_url, qb_username, qb_password):
-    qb = Client(qb_url)
-    qb.auth_log_in(qb_username, qb_password)
-    return qb
-
-# 解析 RSS 获取磁力链接和番剧集信息
-def get_magnet_links(rss_data):
-    tree = ET.ElementTree(ET.fromstring(rss_data))
-    root = tree.getroot()
-    items = []
-
-    for item in root.findall(".//item"):
-        title = item.find(".//title").text
-        enclosure = item.find(".//enclosure")
-        if enclosure is not None:
-            torrent_url = enclosure.get('url')
-            items.append({
-                "title": title,
-                "url": torrent_url,
-                "downloaded": False  # 默认没有下载
-            })
-
-    return items
+    with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+        json.dump(config, f, ensure_ascii=False, indent=4)
 
 
-# 提取番剧名字
-def get_folder_name(rss_data):
-    tree = ET.ElementTree(ET.fromstring(rss_data))
-    root = tree.getroot()
+class MikanWebUI:
+    def __init__(self):
+        self.config = load_config()
+        self.selected_anime = None
+        self.render_ui()
 
-    # 提取 channel/title 作为番剧名字
-    channel_title = root.find(".//channel/title")
-    if channel_title is not None:
-        title_text = channel_title.text
-        # 假设 "Mikan Project - " 是固定前缀
-        folder_name = title_text.replace("Mikan Project - ", "").strip()
-        return folder_name
-    return "未命名番剧"
-
-
-
-# 将磁力链接添加到 qBittorrent
-def add_magnets_to_qb(magnet_links, folder_name, qb, download_dir):
-    folder_path = os.path.join(download_dir, folder_name)
-    os.makedirs(folder_path, exist_ok=True)  # 确保文件夹存在
-
-    for magnet in magnet_links:
-        qb.torrents_add(urls=magnet['url'], savepath=folder_path)
-        print(f"Added magnet link to qBittorrent: {magnet['title']}")
-
-# 主处理函数
-def start_download(qb_url, qb_username, qb_password, download_dir, proxy, rss_url, selected_items):
-    # 获取 RSS 数据并解析
-    rss_data = get_rss_data(rss_url, {"http": proxy, "https": proxy})
-    if rss_data is None:
-        messagebox.showerror("Error", "Failed to retrieve RSS feed.")
-        return
-
-    # 获取磁力链接
-    items = get_magnet_links(rss_data)
-
-    # 过滤出已选择的种子
-    selected_magnets = [item for item in items if item["title"] in selected_items]
-
-    if selected_magnets:
-        # 连接到 qBittorrent
-        qb = connect_to_qb(qb_url, qb_username, qb_password)
-
-        # 将磁力链接添加到 qBittorrent
-        add_magnets_to_qb(selected_magnets, get_folder_name(rss_data), qb, download_dir)
-        messagebox.showinfo("Success", f"Successfully added {len(selected_magnets)} torrents to qBittorrent.")
-    else:
-        messagebox.showwarning("No Torrents", "No torrents selected for download.")
-
-# 显示番剧的种子信息
-def show_torrent_selection_window(rss_data, rss_url, download_dir):
-    # 获取RSS数据中的所有种子
-    items = get_magnet_links(rss_data)
-
-    # 创建新的窗口显示种子信息
-    selection_window = tk.Toplevel()
-    selection_window.title("选择要下载的种子")
-    selection_window.geometry("1080x720")  # 更大的窗口大小，适应1080p显示
-
-    # 创建滚动条和画布容器
-    canvas = tk.Canvas(selection_window)
-    scrollbar = tk.Scrollbar(selection_window, orient="vertical", command=canvas.yview)
-    canvas.config(yscrollcommand=scrollbar.set)
-
-    # 创建一个frame来放入所有种子条目
-    frame = tk.Frame(canvas)
-
-    # 创建复选框列表，供用户选择下载的种子
-    var_dict = {}
-    for item in items:
-        var = tk.BooleanVar()
-        var_dict[item["title"]] = var
-        checkbox = tk.Checkbutton(frame, text=item["title"], variable=var)
-        checkbox.pack(anchor="w", padx=10, pady=2)
-
-    # 将frame放入canvas中
-    canvas.create_window((0, 0), window=frame, anchor="nw")
-
-    # 配置滚动条
-    scrollbar.config(command=canvas.yview)
-
-    # 打包Canvas和Scrollbar
-    canvas.pack(side="left", fill="both", expand=True)
-    scrollbar.pack(side="right", fill="y")
-
-    # 更新滚动区域大小
-    frame.update_idletasks()
-    canvas.config(scrollregion=canvas.bbox("all"))
-
-    # 点击按钮下载选中的种子
-    def download_selected():
-        # 选中种子的标题列表
-        selected_items = [item["title"] for item in items if var_dict.get(item["title"]).get()]
-
-        if selected_items:
-            # 执行下载
-            start_download(DEFAULT_QB_URL, DEFAULT_QB_USERNAME, DEFAULT_QB_PASSWORD,
-                           download_dir, DEFAULT_PROXY, rss_url, selected_items)
-            selection_window.destroy()
-        else:
-            messagebox.showwarning("No Selection", "Please select at least one item to download.")
-
-    # 添加“开始下载”按钮
-    tk.Button(selection_window, text="开始下载", command=download_selected).pack(pady=10)
-
-# 创建图形化界面
-# 创建图形化界面
-def create_gui():
-    # 创建主窗口
-    root = tk.Tk()
-    root.title("qBittorrent 自动下载番剧")
-
-    # 设置窗口大小
-    root.geometry("500x600")
-
-    # 加载配置
-    config = load_config()
-
-    # 输入框：RSS URL 和下载目录
-    def set_rss_and_dir():
-        rss_url = simpledialog.askstring("设置", "请输入 RSS 地址:", initialvalue=config.get('rss_url', ''))
-        download_dir = simpledialog.askstring("设置", "请输入下载目录:", initialvalue=config.get('download_dir', ''))
-        if rss_url and download_dir:
-            name = simpledialog.askstring("设置", "请输入番剧名称:", initialvalue=config.get('name', ''))
-            if name and name not in config:
-                config[name] = {
-                    "rss_url": rss_url,
-                    "download_dir": download_dir,
-                    "items": []  # 初始没有下载过的番剧
+    def render_ui(self):
+        ui.colors(primary='#1d4ed8', secondary='#334155')
+        ui.add_head_html('''
+            <style>
+                body { 
+                    background-color: #f1f5f9; 
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif !important;
+                    -webkit-font-smoothing: antialiased;
+                    -moz-osx-font-smoothing: grayscale;
                 }
-                save_config(config)
-                refresh_anime_list()
+                .high-contrast-card { border: 2px solid #94a3b8 !important; }
+                .anime-title { font-weight: 800 !important; color: #0f172a !important; letter-spacing: -0.02em; }
+                .list-text { font-weight: 600 !important; color: #1e293b !important; font-size: 0.95rem; }
+                .delete-btn { display: none; }
+                .anime-item:hover .delete-btn { display: block; }
+            </style>
+        ''')
 
-    # 刷新番剧列表
-    def refresh_anime_list():
-        listbox.delete(0, tk.END)
-        for anime, details in config.items():
-            listbox.insert(tk.END, f"{anime} -> {details['download_dir']}")
+        # 修改 Header 部分，将按钮放入同一列
+        with ui.header().classes(
+                'items-center bg-white text-slate-900 shadow-md py-3 px-8 border-b-2 border-slate-300 z-50'):
+            ui.label('Mikan Pro').classes('text-2xl font-black tracking-tight anime-title mr-8')
 
-    # 删除番剧
-    def delete_anime():
-        selected = listbox.curselection()
-        if selected:
-            anime = listbox.get(selected[0]).split(" -> ")[0]
-            if anime in config:
-                del config[anime]
-                save_config(config)
-                refresh_anime_list()
-                messagebox.showinfo("删除成功", f"已删除 {anime} 的订阅信息.")
+            # --- 将两个功能按钮移动到此处 ---
+            with ui.row().classes('gap-3'):
+                ui.button('检查资源更新', icon='download_for_offline', on_click=self.check_update_and_fix_cover).classes(
+                    'rounded-lg font-black px-4 shadow-sm')
+                ui.button('关闭服务', icon='power_settings_new',
+                          on_click=lambda: (ui.notify('正在关闭服务...'), nicegui_app.shutdown())).classes(
+                    'rounded-lg font-black px-4 shadow-sm').props('color=red')
+
+            with ui.row().classes(
+                    'ml-auto items-center bg-slate-50 rounded-lg px-4 w-96 border-2 border-slate-400 focus-within:border-primary'):
+                ui.icon('search')
+                self.search_input = ui.input(placeholder='搜索...').props('borderless dense').classes(
+                    'flex-grow ml-2 py-1 font-bold text-lg')
+                self.search_input.on('keydown.enter', self.handle_search)
+
+        with ui.row().classes('w-full p-6 no-wrap items-start max-w-[1500px] mx-auto gap-8'):
+            # 左侧栏：已移除按钮，仅保留列表
+            with ui.column().classes('w-80 sticky top-24 gap-4'):
+                with ui.card().classes('w-full p-0 rounded-xl bg-white overflow-hidden high-contrast-card shadow-lg'):
+                    ui.label('我的订阅').classes(
+                        'font-black px-4 py-3 bg-slate-800 text-white text-sm uppercase tracking-wider')
+                    self.list_container = ui.list().classes('w-full divide-y divide-slate-200')
+                    self.refresh_anime_list()
+
+            # 右侧详情栏
+            with ui.column().classes('flex-grow gap-4'):
+                self.detail_card = ui.card().classes(
+                    'w-full min-h-[700px] p-8 rounded-2xl bg-white relative high-contrast-card shadow-xl')
+                with self.detail_card:
+                    self.detail_area = ui.column().classes('w-full h-full')
+
+    def refresh_anime_list(self):
+        self.list_container.clear()
+        self.config = load_config()
+        with self.list_container:
+            for name in sorted(self.config.keys()):
+                is_active = (name == self.selected_anime)
+                data = self.config[name]
+                with ui.item(on_click=lambda n=name: self.show_details(n)).props('clickable v-ripple').classes(
+                        f'py-4 px-4 anime-item transition-all {"bg-blue-100 border-r-8 border-primary shadow-inner" if is_active else "hover:bg-slate-50"}'
+                ):
+                    with ui.item_section().props('avatar'):
+                        if data.get('cover_url'):
+                            ui.image(data['cover_url']).classes(
+                                'w-12 h-16 rounded shadow-sm border border-slate-300 object-cover')
+                        else:
+                            ui.icon('movie', size='28px', color='slate-500')
+                    with ui.item_section():
+                        ui.item_label(name).classes('list-text')
+
+                    with ui.item_section().props('side'):
+                        ui.button(icon='delete', on_click=lambda n=name: self.delete_subscription(n)).props(
+                            'flat round color=red size=sm').classes('delete-btn')
+
+    def delete_subscription(self, name):
+        if name in self.config:
+            del self.config[name]
+            save_config(self.config)
+            ui.notify(f'已删除订阅: {name}')
+            if self.selected_anime == name: self.selected_anime = None
+            self.refresh_anime_list()
+            self.detail_area.clear()
+
+    def show_details(self, name):
+        self.selected_anime = name
+        self.refresh_anime_list()
+        data = self.config[name]
+
+        folder_name = data.get('folder_name', name)
+        download_dir = data.get('download_dir', '')
+        full_path = os.path.join(download_dir, folder_name)
+
+        videos = sorted(
+            [f for f in os.listdir(full_path) if f.lower().endswith(('.mp4', '.mkv', '.ts'))]) if os.path.exists(
+            full_path) else []
+
+        self.detail_area.clear()
+        with self.detail_area:
+            with ui.row().classes('no-wrap gap-8 w-full items-start'):
+                if data.get('cover_url'):
+                    ui.image(data['cover_url']).classes(
+                        'w-64 h-96 rounded-2xl shadow-2xl object-cover border-4 border-white')
+                with ui.column().classes('flex-grow pt-2'):
+                    ui.label(name).classes('text-4xl font-black text-slate-900 tracking-tighter mb-6 anime-title')
+                    ui.button('打开目录', icon='folder_open', on_click=lambda: os.startfile(full_path)).props(
+                        'unelevated color=primary size=lg').classes('font-bold mt-4')
+
+            ui.separator().classes('my-8 border-slate-300')
+            ui.label('本地文件列表').classes('text-xl font-black mb-4 ml-1 tracking-tight')
+            with ui.scroll_area().classes('w-full h-[400px] pr-4'):
+                if not videos:
+                    ui.label('未找到本地视频文件').classes('text-slate-400 italic ml-1')
+                for v in videos:
+                    v_path = os.path.join(full_path, v)
+                    with ui.row().classes(
+                            'w-full items-center gap-3 py-3 px-5 mb-2 hover:bg-blue-50 hover:shadow-sm rounded-xl border border-slate-200 transition-all group'):
+                        ui.label(v).classes('text-sm text-slate-900 truncate flex-grow font-bold cursor-pointer').on(
+                            'click', lambda _, p=v_path: subprocess.Popen([POTPLAYER_PATH, p]))
+                        with ui.row().classes('gap-2'):
+                            ui.button(icon='play_circle',
+                                      on_click=lambda _, p=v_path: subprocess.Popen([POTPLAYER_PATH, p])).props(
+                                'flat round size=md color=primary').tooltip('PotPlayer 播放')
+                            ui.button(icon='screenshot_monitor',
+                                      on_click=lambda _, p=v_path: subprocess.Popen([DANDAN_PATH, p])).props(
+                                'flat round size=md color=green').tooltip('弹弹Play 播放')
+
+    async def check_update_and_fix_cover(self):
+        if not self.selected_anime:
+            ui.notify('请先选择番剧');
+            return
+        name = self.selected_anime
+        n = ui.notification(f'正在同步: {name}', type='ongoing', spinner=True)
+        try:
+            proxies = {"http": DEFAULT_PROXY, "https": DEFAULT_PROXY}
+            loop = asyncio.get_running_loop()
+            if not self.config[name].get('cover_url'):
+                search_url = f"https://mikanani.me/RSS/Search?searchstr={urllib.parse.quote(name)}"
+                r_search = await loop.run_in_executor(None,
+                                                      lambda: requests.get(search_url, proxies=proxies, timeout=10))
+                root_s = ET.fromstring(r_search.text)
+                first_item = root_s.find(".//item")
+                if first_item is not None:
+                    ep_link = first_item.find("link").text
+                    res_ep = await loop.run_in_executor(None, lambda: requests.get(ep_link, proxies=proxies))
+                    b_match = re.search(r'/Home/Bangumi/(\d+)', res_ep.text)
+                    if b_match:
+                        bangumi_url = f"https://mikanani.me/Home/Bangumi/{b_match.group(1)}"
+                        b_res = await loop.run_in_executor(None, lambda: requests.get(bangumi_url, proxies=proxies))
+                        img_path_match = re.search(r'/(images/Bangumi/[^\s\'"\)>]+)', b_res.text)
+                        if img_path_match:
+                            img_url = "https://mikanani.me/" + img_path_match.group(1).lstrip('/')
+                            self.config[name]['cover_url'] = img_url
+                            save_config(self.config)
+                            self.refresh_anime_list()
+            rss_url = self.config[name]['rss_url']
+            r_rss = await loop.run_in_executor(None, lambda: requests.get(rss_url, proxies=proxies))
+            root = ET.fromstring(r_rss.text)
+            items = []
+            for item in root.findall(".//item"):
+                t = item.find("title").text
+                g = re.search(r'^\[([^\]]+)\]', t).group(1) if re.search(r'^\[([^\]]+)\]', t) else "其他"
+                items.append({'title': t, 'url': item.find(".//enclosure").get('url'), 'group': g})
+            n.dismiss()
+            if items:
+                target_path = os.path.join(self.config[name]['download_dir'],
+                                           self.config[name].get('folder_name', name))
+                self.show_download_selection(items, target_path)
             else:
-                messagebox.showerror("错误", "该番剧不存在!")
+                ui.notify('暂无更新')
+        except Exception as e:
+            n.dismiss();
+            print(f"[ERROR] {e}");
+            ui.notify('更新异常')
 
-    # 显示种子选择窗口
-    def show_torrent_selection():
-        selected = listbox.curselection()
-        if selected:
-            anime = listbox.get(selected[0]).split(" -> ")[0]
-            if anime in config:
-                details = config[anime]
-                rss_data = get_rss_data(details["rss_url"], {"http": DEFAULT_PROXY, "https": DEFAULT_PROXY})
-                if rss_data:
-                    show_torrent_selection_window(rss_data, details["rss_url"], details['download_dir'])
+    def show_download_selection(self, items, target_path):
+        grouped = {}
+        for item in items: grouped.setdefault(item['group'], []).append(item)
+        with ui.dialog() as d, ui.card().classes(
+                'w-[1250px] max-w-none rounded-2xl p-0 overflow-hidden high-contrast-card shadow-2xl'):
+            with ui.row().classes('w-full bg-blue-700 p-5 text-white items-center'):
+                ui.icon('cloud_download', size='32px');
+                ui.label('资源更新清单').classes('text-2xl font-black ml-2')
+            selected = set()
+            with ui.scroll_area().classes('h-[700px] p-8 bg-slate-50'):
+                with ui.column().classes('w-full min-w-[1150px]'):
+                    for group, sub_items in grouped.items():
+                        with ui.column().classes(
+                                'w-full mb-6 bg-white rounded-xl border border-blue-200 overflow-hidden shadow-sm'):
+                            ui.label(group).classes(
+                                'w-full bg-blue-50 px-6 py-3 font-black text-blue-900 text-lg border-b border-blue-100')
+                            for item in sub_items:
+                                with ui.row().classes(
+                                        'w-full items-center py-4 px-6 border-b border-slate-100 hover:bg-slate-50'):
+                                    ui.checkbox(on_change=lambda e, u=item['url']: selected.add(
+                                        u) if e.value else selected.discard(u)).props('dense size=lg')
+                                    ui.label(item['title']).classes('text-base flex-grow font-bold text-slate-800 ml-4')
+            with ui.row().classes('w-full p-6 justify-end bg-white border-t gap-4'):
+                ui.button('取消', on_click=d.close).props('outline color=slate-500').classes('px-8 font-bold')
+                ui.button('确定推送', on_click=lambda: self.do_download(selected, target_path, d)).props(
+                    'unelevated color=blue size=lg').classes('px-12 font-black')
+        d.open()
 
-    # 创建一个 Canvas 和 Scrollbar 来显示支持滚动的 RSS 列表
-    canvas_frame = tk.Frame(root)
-    canvas_frame.pack(pady=10, fill="both", expand=True)
+    def do_download(self, urls, path, dialog):
+        if not urls: return
+        try:
+            qb = Client(DEFAULT_QB_URL);
+            qb.auth_log_in(DEFAULT_QB_USERNAME, DEFAULT_QB_PASSWORD)
+            for url in urls: qb.torrents_add(urls=url, savepath=path)
+            ui.notify('成功推送至 QB');
+            dialog.close()
+        except:
+            ui.notify('QB 连接失败')
 
-    canvas = tk.Canvas(canvas_frame)
-    scrollbar = tk.Scrollbar(canvas_frame, orient="vertical", command=canvas.yview)
-    canvas.config(yscrollcommand=scrollbar.set)
+    async def handle_search(self):
+        query = self.search_input.value.strip()
+        if not query: return
+        n = ui.notification('搜索抓取中...', type='ongoing', spinner=True)
+        try:
+            proxies = {"http": DEFAULT_PROXY, "https": DEFAULT_PROXY}
+            r = await asyncio.get_running_loop().run_in_executor(None, lambda: requests.get(
+                f"https://mikanani.me/RSS/Search?searchstr={urllib.parse.quote(query)}", proxies=proxies))
+            root = ET.fromstring(r.text)
+            official = re.sub(r'^Mikan Project - (搜索结果:)?', '', root.find(".//channel/title").text).strip()
+            item = root.find(".//item")
+            cover_url = ""
+            if item is not None:
+                ep_url = item.find("link").text
+                res = await asyncio.get_running_loop().run_in_executor(None,
+                                                                       lambda: requests.get(ep_url, proxies=proxies))
+                b_match = re.search(r'/Home/Bangumi/(\d+)', res.text)
+                if b_match:
+                    b_res = await asyncio.get_running_loop().run_in_executor(None, lambda: requests.get(
+                        f"https://mikanani.me/Home/Bangumi/{b_match.group(1)}", proxies=proxies))
+                    i_match = re.search(r'/(images/Bangumi/[^\s\'"\)>]+)', b_res.text)
+                    if i_match: cover_url = "https://mikanani.me/" + i_match.group(1).lstrip('/')
+            n.dismiss();
+            self.show_confirm_dialog(official, cover_url)
+        except:
+            n.dismiss();
+            ui.notify('搜索失败')
 
-    # 创建一个 Frame 来包含 Listbox 和其他内容
-    listbox_frame = tk.Frame(canvas)
+    def show_confirm_dialog(self, name, cover):
+        with ui.dialog() as d, ui.card().classes('w-[500px] p-8 rounded-2xl high-contrast-card shadow-2xl'):
+            ui.label('确认新增订阅').classes('text-2xl font-black mb-4 text-primary anime-title')
+            if cover: ui.image(cover).classes('w-full h-80 rounded-xl shadow-md mb-4 object-cover')
+            ui.label(name).classes('font-black text-lg mb-6')
+            path_i = ui.input('下载路径', value=f"H:\\BT-Downloads\\番剧\\2026\\01").classes('w-full mb-8 font-bold').props(
+                'outlined rounded dense')
+            ui.button('确认订阅', on_click=lambda: self.final_add(name, cover, path_i.value, d)).props(
+                'unelevated size=lg w-full').classes('font-black')
+        d.open()
 
-    # 番剧列表
-    listbox = tk.Listbox(listbox_frame, height=20, width=70)
-    listbox.pack(pady=10)
-
-    # 将 listbox_frame 放入 canvas 中
-    canvas.create_window((0, 0), window=listbox_frame, anchor="nw")
-
-    # 配置滚动条
-    scrollbar.config(command=canvas.yview)
-
-    # 打包 Canvas 和 Scrollbar
-    canvas.pack(side="left", fill="both", expand=True)
-    scrollbar.pack(side="right", fill="y")
-
-    # 更新滚动区域大小
-    listbox_frame.update_idletasks()
-    canvas.config(scrollregion=canvas.bbox("all"))
-
-    refresh_anime_list()
-
-    # 按钮区
-    btn_frame = tk.Frame(root)
-    btn_frame.pack(pady=10)
-
-    tk.Button(btn_frame, text="设置订阅和下载目录", command=set_rss_and_dir).pack(side=tk.LEFT, padx=5)
-    tk.Button(btn_frame, text="显示种子选择", command=show_torrent_selection).pack(side=tk.LEFT, padx=5)
-    tk.Button(btn_frame, text="删除番剧", command=delete_anime).pack(side=tk.LEFT, padx=5)
-
-    # 运行窗口
-    root.mainloop()
+    def final_add(self, name, cover, path, dialog):
+        self.config[name] = {"rss_url": f"https://mikanani.me/RSS/Search?searchstr={urllib.parse.quote(name)}",
+                             "download_dir": path, "cover_url": cover, "folder_name": name}
+        save_config(self.config);
+        dialog.close();
+        self.refresh_anime_list();
+        ui.notify('订阅成功')
 
 
-if __name__ == "__main__":
-    create_gui()
+if __name__ in {"__main__", "__mp_main__"}:
+    app = MikanWebUI()
+    ui.run(title='Mikan Manager Pro', native=True, window_size=(1450, 950), port=8105)
