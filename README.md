@@ -31,7 +31,17 @@ DEFAULT_QB_URL = 'http://127.0.0.1:8080'
 DEFAULT_QB_USERNAME = ''
 DEFAULT_QB_PASSWORD = ''
 ```
+##  关键配置说明
 
+在首次运行前，建议右键编辑 `SimpleDownloadAnime.py`，在文件顶部修改以下基础配置以匹配您的电脑环境：
+
+* **播放器路径**：
+    * `DANDAN_PATH`: 弹弹Play 的安装全路径，用于加载弹幕播放。
+    * `POTPLAYER_PATH`: PotPlayer 的安装全路径，用于纯净播放。
+* **网络与下载**：
+    * `DEFAULT_PROXY`: 必须配置。由于 Mikan 官网访问限制，请填写您的本地代理地址（如 `socks5h://127.0.0.1:10808`）。
+    * `DEFAULT_QB_URL`: qBittorrent 的 WebUI 地址，默认为 `http://127.0.0.1:8080`。
+    * `DEFAULT_QB_USERNAME/PASSWORD`: 您的 qB 登录凭据，若未设置密码可留空。
 
 ## 🛠️ 环境部署 (推荐方式)
 
