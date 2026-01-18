@@ -43,17 +43,7 @@ DEFAULT_QB_PASSWORD = ''
     * `DEFAULT_QB_URL`: qBittorrent 的 WebUI 地址，默认为 `http://127.0.0.1:8080`。
     * `DEFAULT_QB_USERNAME/PASSWORD`: 您的 qB 登录凭据，若未设置密码可留空。
 
-## 🛠️ 环境部署 (推荐方式)
 
-
-本项目建议使用虚拟环境运行。您只需确保系统中安装了 Python，然后：
-
-1. 将所有文件放在同一个文件夹。
-2. 确保 `requirements.txt` 存在。
-3. 双击 `开始运行.bat`。
-   * 脚本会自动检测并创建 `.venv` 虚拟环境。
-   * 脚本会自动安装所需依赖。
-   * 脚本会自动唤起浏览器并启动服务。
 
 
 
