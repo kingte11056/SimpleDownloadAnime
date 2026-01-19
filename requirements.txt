@@ -4,9 +4,7 @@ nicegui==1.4.24
 pyinstaller
 # 网络请求与数据处理
 requests>=2.31.0
-app_icon.ico
 # qBittorrent 联动
 qbittorrent-api>=2024.1.1
 
-# 异步运行支持（Python 标准库已包含，但在部分特殊环境可能需要显式声明）
-asyncio
+

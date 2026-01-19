@@ -1,0 +1,9 @@
+{
+    "dandan_path": "C:\\弹弹play\\dandanplay.exe",
+    "potplayer_path": "C:\\app\\PotPlayer\\PotPlayerMini64.exe",
+    "proxy": "socks5h://127.0.0.1:10808",
+    "qb_url": "http://127.0.0.1:8080",
+    "qb_username": "",
+    "qb_password": "",
+    "subscriptions_file": "subscriptions.json"
+}

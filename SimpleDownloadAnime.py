@@ -8,30 +8,113 @@ import subprocess
 import asyncio
 import xml.etree.ElementTree as ET
 from qbittorrentapi import Client
-from nicegui import ui, app as nicegui_app
+import sys
+
 
 # --- 基础配置 ---
-CONFIG_FILE = "subscriptions.json"
-DANDAN_PATH = r"D:\弹弹play\dandanplay.exe"
-POTPLAYER_PATH = r"D:\app\PotPlayer\PotPlayerMini64.exe"
-DEFAULT_PROXY = "socks5h://127.0.0.1:10808"
-DEFAULT_QB_URL = 'http://127.0.0.1:8080'
-DEFAULT_QB_USERNAME = ''
-DEFAULT_QB_PASSWORD = ''
+
+# === 关键修复：处理 PyInstaller 的路径识别 ===
+if getattr(sys, 'frozen', False):
+    # 如果是打包运行，强制切换工作目录到解压后的临时文件夹
+    os.chdir(sys._MEIPASS)
+
+from nicegui import ui, app as nicegui_app
+
+#基础文件名
+APP_CONFIG_FILE = "config.json"
+
+# --- 基础配置名 ---
+APP_CONFIG_FILENAME = "config.json"
+SUBS_CONFIG_FILENAME = "subscriptions.json"
+
+
+def get_external_path(filename):
+    """通用路径获取：确保文件在 .exe 同级目录"""
+    if getattr(sys, 'frozen', False):
+        base_path = os.path.dirname(sys.executable)
+    else:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_path, filename)
+
+
+def load_app_settings():
+    """处理 app_config：读取并返回配置字典，如果不存在则创建默认值"""
+    config_path = get_external_path(APP_CONFIG_FILENAME)
+
+    # 这里的默认值就是你原来的“基础配置”
+    default_settings = {
+        "dandan_path": r"",
+        "potplayer_path": r"",
+        "proxy": "",
+        "qb_url": "",
+        "qb_username": "",
+        "qb_password": ""
+    }
+
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                user_settings = json.load(f)
+                # 用读取到的值覆盖默认值，确保新增字段也能兼容
+                default_settings.update(user_settings)
+        except Exception as e:
+            print(f"读取 config.json 失败: {e}")
+    else:
+        # 逻辑与 subscriptions 一致：如果没有就存一份默认的在外面
+        try:
+            with open(config_path, 'w', encoding='utf-8') as f:
+                json.dump(default_settings, f, ensure_ascii=False, indent=4)
+        except:
+            pass
+
+    return default_settings
+
+
+# --- 2. 自动执行加载并赋值给变量 ---
+settings = load_app_settings()
+
+# 将读取到的值赋值给你的变量
+DANDAN_PATH = settings["dandan_path"]
+POTPLAYER_PATH = settings["potplayer_path"]
+DEFAULT_PROXY = settings["proxy"]
+DEFAULT_QB_URL = settings["qb_url"]
+DEFAULT_QB_USERNAME = settings["qb_username"]
+DEFAULT_QB_PASSWORD = settings["qb_password"]
+
+def get_base_path():
+    """获取程序运行时的根目录"""
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+def get_config_path():
+    # getattr(sys, 'frozen', False) 判断是否为打包后的环境
+    if getattr(sys, 'frozen', False):
+        # 打包后的路径：使用 .exe 文件所在的真实文件夹
+        # 不要使用 sys._MEIPASS，因为那是临时的，关掉就没了
+        base_path = os.path.dirname(sys.executable)
+    else:
+        # 开发环境路径：代码文件所在的文件夹
+        base_path = os.path.dirname(os.path.abspath(__file__))
+
+    return os.path.join(base_path, "subscriptions.json")
 
 
 def load_config():
-    if os.path.exists(CONFIG_FILE):
+    config_path = get_config_path()
+    if os.path.exists(config_path):
         try:
-            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+            with open(config_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
-        except:
+        except Exception as e:
+            print(f"读取失败: {e}")
             return {}
     return {}
 
 
 def save_config(config):
-    with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+    with open(SUBS_CONFIG_FILENAME, 'w', encoding='utf-8') as f:
         json.dump(config, f, ensure_ascii=False, indent=4)
 
 
@@ -370,4 +453,11 @@ class MikanWebUI:
 if __name__ in {"__main__", "__mp_main__"}:
     app = MikanWebUI()
     # 使用 native=False 因为我们要通过启动脚本控制窗口和后台
-    ui.run(title='Mikan Manager Pro', port=8105, show=False, reload=False)
+    ui.run(
+        native=True,
+        window_size=(1400, 900),
+        title='番剧下载器',
+        port=8105,
+        show=False,
+        reload=False
+    )

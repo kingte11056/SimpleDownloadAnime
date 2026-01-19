@@ -22,7 +22,10 @@
 ```bash
 pip install nicegui requests qbittorrentapi
 ```
-# --- 基础配置 ---
+
+##  基础配置说明
+
+在首次运行前，建议右键编辑 `config.json`，在文件顶部修改以下基础配置以匹配您的电脑环境：
 ```bash
 CONFIG_FILE = "subscriptions.json"
 DANDAN_PATH = r"D:\弹弹play\dandanplay.exe"
@@ -32,10 +35,6 @@ DEFAULT_QB_URL = 'http://127.0.0.1:8080'
 DEFAULT_QB_USERNAME = ''
 DEFAULT_QB_PASSWORD = ''
 ```
-##  关键配置说明
-
-在首次运行前，建议右键编辑 `SimpleDownloadAnime.py`，在文件顶部修改以下基础配置以匹配您的电脑环境：
-
 * **播放器路径**：
     * `DANDAN_PATH`: 弹弹Play 的安装全路径，用于加载弹幕播放。
     * `POTPLAYER_PATH`: PotPlayer 的安装全路径，用于纯净播放。
@@ -44,6 +43,134 @@ DEFAULT_QB_PASSWORD = ''
     * `DEFAULT_QB_URL`: qBittorrent 的 WebUI 地址，默认为 `http://127.0.0.1:8080`。
     * `DEFAULT_QB_USERNAME/PASSWORD`: 您的 qB 登录凭据，若未设置密码可留空。
 
+##部署说明
+有三种方式使用  1 直接使用exe版本 2 直接执行py文件  3 直接修改代码后自定义打包
+### 1 下载exe版本
 
+保证 有配置文件  config.json 
+```bash
+{
+    "dandan_path": "C:\\弹弹play\\1dandanplay.exe",
+    "potplayer_path": "C:\\app\\1PotPlayer\\1PotPlayerMini64.exe",
+    "proxy": "socks5h://127.0.0.1:10808",
+    "qb_url": "http://127.0.0.1:8080",
+    "qb_username": "",
+    "qb_password": "",
+    "subscriptions_file": "subscriptions.json"
+}
+```
+以及番剧订阅存储  subscriptions.json
+```bash
+{
+    
+    "Fate/strange Fake": {
+        "rss_url": "https://mikanani.me/RSS/Bangumi?bangumiId=3503",
+        "download_dir": "H:\\BT-Downloads\\番剧\\2026\\01",
+        "items": [],
+        "folder_name": "Fate/strange Fake",
+        "cover_url": "https://mikanani.me/images/Bangumi/202501/06be31dd.jpg?width=400&height=560&format=webp"
+    }
+}
+```
+
+
+### 2 直接执行 启动脚本 运行py版本
+在运行之前，请确保你的电脑已安装 **Python 3.8+**，并安装以下依赖库：
+相关配置 根据自己的需要去改：
+```bash
+pip install -r requirements.txt
+```
+保证 有配置文件  config.json 
+```bash
+{
+    "dandan_path": "C:\\弹弹play\\1dandanplay.exe",
+    "potplayer_path": "C:\\app\\1PotPlayer\\1PotPlayerMini64.exe",
+    "proxy": "socks5h://127.0.0.1:10808",
+    "qb_url": "http://127.0.0.1:8080",
+    "qb_username": "",
+    "qb_password": "",
+    "subscriptions_file": "subscriptions.json"
+}
+```
+以及番剧订阅存储  subscriptions.json
+```bash
+{
+    
+    "Fate/strange Fake": {
+        "rss_url": "https://mikanani.me/RSS/Bangumi?bangumiId=3503",
+        "download_dir": "H:\\BT-Downloads\\番剧\\2026\\01",
+        "items": [],
+        "folder_name": "Fate/strange Fake",
+        "cover_url": "https://mikanani.me/images/Bangumi/202501/06be31dd.jpg?width=400&height=560&format=webp"
+    }
+}
+```
+启动脚本bat
+
+```bash
+chcp 65001
+@echo off
+:: 检查是否是以最小化模式运行，如果不是，则调用自己并最小化
+if "%1" == "min" goto :run
+start /min "" "%~0" min
+exit
+
+:run
+cd /d "%~dp0"
+
+echo 正在启动后台服务...
+
+:: 启动后台服务 (pythonw 本身不产生窗口)
+start /b python SimpleDownloadAnime.py
+
+:: 延迟 2 秒等待服务就绪后打开浏览器
+timeout /t 2 /nobreak >nul
+start "" "http://127.0.0.1:8105"
+
+echo 服务已在后台运行，本窗口已最小化。
+:: 如果你想让窗口一直挂着，可以去掉下面的 exit 或者换成 pause
+exit
+```
+###  3 自己打包exe使用说明
+
+在运行之前，请确保你的电脑已安装 **Python 3.8+**，并安装以下依赖库：
+相关配置 根据自己的需要去改：
+```bash
+pip install nicegui requests qbittorrentapi
+```
+保证 有配置文件  config.json 
+```bash
+{
+    "dandan_path": "C:\\弹弹play\\1dandanplay.exe",
+    "potplayer_path": "C:\\app\\1PotPlayer\\1PotPlayerMini64.exe",
+    "proxy": "socks5h://127.0.0.1:10808",
+    "qb_url": "http://127.0.0.1:8080",
+    "qb_username": "",
+    "qb_password": "",
+    "subscriptions_file": "subscriptions.json"
+}
+```
+以及番剧订阅存储  subscriptions.json
+```bash
+{
+    
+    "Fate/strange Fake": {
+        "rss_url": "https://mikanani.me/RSS/Bangumi?bangumiId=3503",
+        "download_dir": "H:\\BT-Downloads\\番剧\\2026\\01",
+        "items": [],
+        "folder_name": "Fate/strange Fake",
+        "cover_url": "https://mikanani.me/images/Bangumi/202501/06be31dd.jpg?width=400&height=560&format=webp"
+    }
+}
+```
+打包命令:
+```bash
+pyinstaller ^
+  --onefile ^
+  --windowed ^
+  --icon=app_icon.ico ^
+  --add-data "你的对于的地址Python\Python39\lib\site-packages\nicegui;nicegui" ^
+  SimpleDownloadAnime.py
+```
 
 
