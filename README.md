@@ -43,7 +43,7 @@ DEFAULT_QB_PASSWORD = ''
     * `DEFAULT_QB_URL`: qBittorrent 的 WebUI 地址，默认为 `http://127.0.0.1:8080`。
     * `DEFAULT_QB_USERNAME/PASSWORD`: 您的 qB 登录凭据，若未设置密码可留空。
 
-##部署说明
+## 部署说明
 有三种方式使用  1 直接使用exe版本 2 直接执行py文件  3 直接修改代码后自定义打包
 ### 1 下载exe版本
 
