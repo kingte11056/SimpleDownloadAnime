@@ -136,7 +136,7 @@ exit
 在运行之前，请确保你的电脑已安装 **Python 3.8+**，并安装以下依赖库：
 相关配置 根据自己的需要去改：
 ```bash
-pip install nicegui requests qbittorrentapi
+pip install -r requirements.txt
 ```
 保证 有配置文件  config.json 
 ```bash
