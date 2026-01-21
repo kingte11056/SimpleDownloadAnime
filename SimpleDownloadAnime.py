@@ -463,7 +463,4 @@ class MikanWebUI:
 if __name__ in {"__main__", "__mp_main__"}:
     app = MikanWebUI()
     # 使用 native=False 因为我们要通过启动脚本控制窗口和后台
-    if __name__ in {"__main__", "__mp_main__"}:
-        app = MikanWebUI()
-        # 使用 native=False 因为我们要通过启动脚本控制窗口和后台
-        ui.run(title='番剧下载器', port=8105, show=False, reload=False, host='localhost')
+    ui.run(title='番剧下载器', port=8105, show=False, reload=False, host='localhost')
