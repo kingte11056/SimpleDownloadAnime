@@ -9,7 +9,7 @@ import asyncio
 import xml.etree.ElementTree as ET
 from qbittorrentapi import Client
 import sys
-
+import signal
 
 # --- 基础配置 ---
 
@@ -185,9 +185,17 @@ class MikanWebUI:
         asyncio.create_task(self.delayed_exit())
 
     async def delayed_exit(self):
-        await asyncio.sleep(0.5)
-        import os
-        os._exit(0)
+        # 给前端一点时间显示通知
+        await asyncio.sleep(0.8)
+
+        try:
+            # 优雅关闭 NiceGUI / aiohttp
+            await nicegui_app.shutdown()
+        except Exception:
+            pass
+        finally:
+            # 确保进程彻底结束（Windows / pythonw 友好）
+            os.kill(os.getpid(), signal.SIGTERM)
 
     def refresh_anime_list(self):
         self.list_container.clear()
@@ -231,7 +239,9 @@ class MikanWebUI:
         # 检查本地视频
         videos = []
         if os.path.exists(full_path):
-            videos = sorted([f for f in os.listdir(full_path) if f.lower().endswith(('.mp4', '.mkv', '.ts'))])
+            # 添加 reverse=True 参数实现降序
+            videos = sorted([f for f in os.listdir(full_path) if f.lower().endswith(('.mp4', '.mkv', '.ts'))],
+                            reverse=True)
 
         self.detail_area.clear()
         with self.detail_area:
@@ -453,11 +463,7 @@ class MikanWebUI:
 if __name__ in {"__main__", "__mp_main__"}:
     app = MikanWebUI()
     # 使用 native=False 因为我们要通过启动脚本控制窗口和后台
-    ui.run(
-        native=True,
-        window_size=(1400, 900),
-        title='番剧下载器',
-        port=8105,
-        show=False,
-        reload=False
-    )
+    if __name__ in {"__main__", "__mp_main__"}:
+        app = MikanWebUI()
+        # 使用 native=False 因为我们要通过启动脚本控制窗口和后台
+        ui.run(title='番剧下载器', port=8105, show=False, reload=False, host='localhost')

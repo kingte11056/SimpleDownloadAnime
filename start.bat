@@ -1,8 +1,9 @@
-chcp 65001
 @echo off
-:: 检查是否是以最小化模式运行，如果不是，则调用自己并最小化
-if "%1" == "min" goto :run
-start /min "" "%~0" min
+chcp 65001 >nul
+
+:: 最小化自身
+if "%1"=="min" goto run
+start /min "" "%~f0" min
 exit
 
 :run
@@ -10,13 +11,18 @@ cd /d "%~dp0"
 
 echo 正在启动后台服务...
 
-:: 启动后台服务 (pythonw 本身不产生窗口)
-start /b python SimpleDownloadAnime.py
+:: 启动 Python Web 服务（无窗口）
+start "" pythonw SimpleDownloadAnime.py
 
-:: 延迟 2 秒等待服务就绪后打开浏览器
-timeout /t 2 /nobreak >nul
+:: 等待端口 8105 就绪（最多等 10 秒）
+for /L %%i in (1,1,10) do (
+    timeout /t 1 >nul
+    powershell -command "if(Test-NetConnection 127.0.0.1 -Port 8105 -InformationLevel Quiet){exit 0}else{exit 1}" && goto open
+)
+
+echo 服务启动超时
+exit
+
+:open
 start "" "http://127.0.0.1:8105"
-
-echo 服务已在后台运行，本窗口已最小化。
-:: 如果你想让窗口一直挂着，可以去掉下面的 exit 或者换成 pause
 exit
