@@ -236,15 +236,18 @@ class MikanWebUI:
         download_dir = data.get('download_dir', '')
         full_path = os.path.join(download_dir, folder_name)
 
-        # 1. 检查本地视频 (降序)
+        # --- 1. 本地视频统计与排序 ---
         videos = []
+        local_count = 0
         if os.path.exists(full_path):
-            videos = sorted([f for f in os.listdir(full_path) if f.lower().endswith(('.mp4', '.mkv', '.ts'))],
-                            reverse=True)
+            # 仅过滤视频文件
+            all_files = [f for f in os.listdir(full_path) if f.lower().endswith(('.mp4', '.mkv', '.ts'))]
+            videos = sorted(all_files, reverse=True)
+            local_count = len(all_files)
 
         self.detail_area.clear()
         with self.detail_area:
-            # --- 顶部番剧信息 (略) ---
+            # --- 顶部番剧信息 ---
             with ui.row().classes('no-wrap gap-8 w-full items-start'):
                 if data.get('cover_url'):
                     ui.image(data['cover_url']).classes(
@@ -252,36 +255,30 @@ class MikanWebUI:
                 with ui.column().classes('flex-grow pt-2'):
                     ui.label(name).classes('text-4xl font-black text-slate-900 tracking-tighter mb-6 anime-title')
                     ui.button('打开本地目录', icon='folder_open', on_click=lambda: os.startfile(full_path)).props(
-                        'unelevated color=primary size=lg').classes('font-bold')
+                        'unelevated color=primary size=lg').classes('font-bold shadow-lg')
 
             ui.separator().classes('my-8 border-slate-300')
 
-            # --- 2. 云端多选更新区 (按钮移至标题栏) ---
+            # --- 2. 云端资源区 (详细归集统计) ---
             selected_urls = set()
-
-            # 创建 expansion 并通过 slot 自定义标题栏
             with ui.expansion('', icon='cloud_download').classes(
                     'w-full mb-6 rounded-xl border-2 border-blue-200 bg-blue-50/30 shadow-sm') as exp:
-                # 使用 header 插槽自定义红线位置的内容
                 with exp.add_slot('header'):
                     with ui.row().classes('w-full items-center justify-between pr-4'):
                         exp_label = ui.label('正在自动检查云端更新...').classes('font-bold text-blue-800 animate-pulse')
-                        # 批量推送按钮放在右侧
                         batch_btn = ui.button('推送已选', icon='bolt',
                                               on_click=lambda: [self.do_download(list(selected_urls), full_path, None),
                                                                 selected_urls.clear()]
                                               ).props('unelevated color=blue-7 dense').classes(
                             'px-4 font-bold shadow-md')
-                        # 初始隐藏，等检查到资源再显示
                         batch_btn.set_visibility(False)
 
                 async def auto_check_rss():
                     try:
                         proxies = {"http": DEFAULT_PROXY, "https": DEFAULT_PROXY}
                         loop = asyncio.get_running_loop()
-                        rss_url = data['rss_url']
-                        r_rss = await loop.run_in_executor(None,
-                                                           lambda: requests.get(rss_url, proxies=proxies, timeout=10))
+                        r_rss = await loop.run_in_executor(None, lambda: requests.get(data['rss_url'], proxies=proxies,
+                                                                                      timeout=10))
                         root = ET.fromstring(r_rss.text)
 
                         grouped_items = {}
@@ -295,8 +292,10 @@ class MikanWebUI:
 
                         exp_label.classes(remove='animate-pulse')
                         if item_count > 0:
-                            exp_label.set_text(f'云端资源 ({item_count} 条)')
-                            batch_btn.set_visibility(True)  # 显示按钮
+                            # 云端依然保留详细统计，方便对比
+                            cloud_stats = " | ".join([f"{k}: {len(v)}" for k, v in grouped_items.items()])
+                            exp_label.set_text(f"云端资源: {item_count} 条 ({cloud_stats})")
+                            batch_btn.set_visibility(True)
                             with exp:
                                 with ui.column().classes('w-full gap-2 p-4 bg-white'):
                                     for group_name in sorted(grouped_items.keys()):
@@ -309,15 +308,13 @@ class MikanWebUI:
                                             with ui.column().classes('w-full divide-y'):
                                                 for item in sorted_group_items:
                                                     with ui.row().classes(
-                                                            'w-full items-center py-2 px-4 hover:bg-slate-50 transition-colors'):
-                                                        # 勾选框
+                                                            'w-full items-center py-2 px-4 hover:bg-slate-50'):
                                                         ui.checkbox(
                                                             on_change=lambda e, u=item['url']: selected_urls.add(
                                                                 u) if e.value else selected_urls.discard(u)).props(
                                                             'dense size=sm')
                                                         ui.label(item['title']).classes(
                                                             'text-xs font-medium text-slate-800 flex-grow truncate')
-                                                        # 单行快速推送图标 (改细一点，不占位)
                                                         ui.button(icon='send',
                                                                   on_click=lambda _, u=item['url']: self.do_download(
                                                                       [u], full_path, None)).props(
@@ -329,15 +326,15 @@ class MikanWebUI:
 
                 asyncio.create_task(auto_check_rss())
 
-            # --- 3. 本地视频列表 (略) ---
-            ui.label('本地视频文件').classes('text-xl font-black mb-4 ml-1 tracking-tight')
+            # --- 3. 本地视频列表 (仅显示总条数) ---
+            ui.label(f'本地视频文件 ({local_count} 条)').classes('text-xl font-black mb-4 ml-1 tracking-tight text-slate-700')
             with ui.scroll_area().classes('w-full h-[400px] pr-4'):
                 if not videos:
-                    ui.label('暂无视频文件').classes('text-slate-400 italic ml-1')
+                    ui.label('暂无本地视频文件').classes('text-slate-400 italic ml-1')
                 for v in videos:
                     v_path = os.path.join(full_path, v)
                     with ui.row().classes(
-                            'w-full items-center gap-3 py-3 px-5 mb-2 hover:bg-blue-50 rounded-xl border border-slate-200 transition-all'):
+                            'w-full items-center gap-3 py-3 px-5 mb-2 hover:bg-blue-50 rounded-xl border border-slate-200 transition-all shadow-sm'):
                         ui.label(v).classes('text-sm text-slate-900 truncate flex-grow font-bold cursor-pointer').on(
                             'click', lambda _, p=v_path: subprocess.Popen([POTPLAYER_PATH, p]))
                         with ui.row().classes('gap-2'):
