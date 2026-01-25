@@ -228,7 +228,7 @@ class MikanWebUI:
             self.refresh_anime_list()
             self.detail_area.clear()
 
-    def show_details(self, name):
+    async def show_details(self, name):
         self.selected_anime = name
         self.refresh_anime_list()
         data = self.config[name]
@@ -236,15 +236,15 @@ class MikanWebUI:
         download_dir = data.get('download_dir', '')
         full_path = os.path.join(download_dir, folder_name)
 
-        # 检查本地视频
+        # 1. 检查本地视频 (降序)
         videos = []
         if os.path.exists(full_path):
-            # 添加 reverse=True 参数实现降序
             videos = sorted([f for f in os.listdir(full_path) if f.lower().endswith(('.mp4', '.mkv', '.ts'))],
                             reverse=True)
 
         self.detail_area.clear()
         with self.detail_area:
+            # --- 顶部番剧信息 (略) ---
             with ui.row().classes('no-wrap gap-8 w-full items-start'):
                 if data.get('cover_url'):
                     ui.image(data['cover_url']).classes(
@@ -255,10 +255,85 @@ class MikanWebUI:
                         'unelevated color=primary size=lg').classes('font-bold')
 
             ui.separator().classes('my-8 border-slate-300')
+
+            # --- 2. 云端多选更新区 (按钮移至标题栏) ---
+            selected_urls = set()
+
+            # 创建 expansion 并通过 slot 自定义标题栏
+            with ui.expansion('', icon='cloud_download').classes(
+                    'w-full mb-6 rounded-xl border-2 border-blue-200 bg-blue-50/30 shadow-sm') as exp:
+                # 使用 header 插槽自定义红线位置的内容
+                with exp.add_slot('header'):
+                    with ui.row().classes('w-full items-center justify-between pr-4'):
+                        exp_label = ui.label('正在自动检查云端更新...').classes('font-bold text-blue-800 animate-pulse')
+                        # 批量推送按钮放在右侧
+                        batch_btn = ui.button('推送已选', icon='bolt',
+                                              on_click=lambda: [self.do_download(list(selected_urls), full_path, None),
+                                                                selected_urls.clear()]
+                                              ).props('unelevated color=blue-7 dense').classes(
+                            'px-4 font-bold shadow-md')
+                        # 初始隐藏，等检查到资源再显示
+                        batch_btn.set_visibility(False)
+
+                async def auto_check_rss():
+                    try:
+                        proxies = {"http": DEFAULT_PROXY, "https": DEFAULT_PROXY}
+                        loop = asyncio.get_running_loop()
+                        rss_url = data['rss_url']
+                        r_rss = await loop.run_in_executor(None,
+                                                           lambda: requests.get(rss_url, proxies=proxies, timeout=10))
+                        root = ET.fromstring(r_rss.text)
+
+                        grouped_items = {}
+                        item_count = 0
+                        for item in root.findall(".//item"):
+                            t = item.find("title").text
+                            u = item.find(".//enclosure").get('url')
+                            g = re.search(r'^\[([^\]]+)\]', t).group(1) if re.search(r'^\[([^\]]+)\]', t) else "其他"
+                            grouped_items.setdefault(g, []).append({'title': t, 'url': u})
+                            item_count += 1
+
+                        exp_label.classes(remove='animate-pulse')
+                        if item_count > 0:
+                            exp_label.set_text(f'云端资源 ({item_count} 条)')
+                            batch_btn.set_visibility(True)  # 显示按钮
+                            with exp:
+                                with ui.column().classes('w-full gap-2 p-4 bg-white'):
+                                    for group_name in sorted(grouped_items.keys()):
+                                        with ui.card().classes(
+                                                'w-full p-0 border border-blue-100 shadow-none overflow-hidden'):
+                                            ui.label(group_name).classes(
+                                                'w-full bg-blue-50 px-4 py-1 text-xs font-black text-blue-700 border-b')
+                                            sorted_group_items = sorted(grouped_items[group_name],
+                                                                        key=lambda x: x['title'], reverse=True)
+                                            with ui.column().classes('w-full divide-y'):
+                                                for item in sorted_group_items:
+                                                    with ui.row().classes(
+                                                            'w-full items-center py-2 px-4 hover:bg-slate-50 transition-colors'):
+                                                        # 勾选框
+                                                        ui.checkbox(
+                                                            on_change=lambda e, u=item['url']: selected_urls.add(
+                                                                u) if e.value else selected_urls.discard(u)).props(
+                                                            'dense size=sm')
+                                                        ui.label(item['title']).classes(
+                                                            'text-xs font-medium text-slate-800 flex-grow truncate')
+                                                        # 单行快速推送图标 (改细一点，不占位)
+                                                        ui.button(icon='send',
+                                                                  on_click=lambda _, u=item['url']: self.do_download(
+                                                                      [u], full_path, None)).props(
+                                                            'flat round color=grey-4 size=xs')
+                        else:
+                            exp_label.set_text('云端暂无新资源')
+                    except Exception as err:
+                        exp_label.set_text(f'检查失败: {err}')
+
+                asyncio.create_task(auto_check_rss())
+
+            # --- 3. 本地视频列表 (略) ---
             ui.label('本地视频文件').classes('text-xl font-black mb-4 ml-1 tracking-tight')
             with ui.scroll_area().classes('w-full h-[400px] pr-4'):
                 if not videos:
-                    ui.label('暂无视频文件，请检查下载目录。').classes('text-slate-400 italic ml-1')
+                    ui.label('暂无视频文件').classes('text-slate-400 italic ml-1')
                 for v in videos:
                     v_path = os.path.join(full_path, v)
                     with ui.row().classes(
@@ -268,10 +343,10 @@ class MikanWebUI:
                         with ui.row().classes('gap-2'):
                             ui.button(icon='play_circle',
                                       on_click=lambda _, p=v_path: subprocess.Popen([POTPLAYER_PATH, p])).props(
-                                'flat round color=primary').tooltip('PotPlayer')
+                                'flat round color=primary')
                             ui.button(icon='screenshot_monitor',
                                       on_click=lambda _, p=v_path: subprocess.Popen([DANDAN_PATH, p])).props(
-                                'flat round color=green').tooltip('弹弹Play')
+                                'flat round color=green')
 
     async def check_update_and_fix_cover(self):
         if not self.selected_anime:
@@ -387,45 +462,88 @@ class MikanWebUI:
         d.open()
 
     def do_download(self, urls, path, dialog):
-        if not urls: return
+        if not urls:
+            ui.notify('请先选择要下载的资源', type='warning')
+            return
         try:
+            # 初始化 qB 客户端
             qb = Client(DEFAULT_QB_URL)
             qb.auth_log_in(DEFAULT_QB_USERNAME, DEFAULT_QB_PASSWORD)
-            for url in urls: qb.torrents_add(urls=url, savepath=path)
-            ui.notify('推送成功！请在 qBittorrent 中查看进度')
-            dialog.close()
+
+            # 执行推送
+            for url in urls:
+                qb.torrents_add(urls=url, savepath=path)
+
+            ui.notify(f'已成功推送 {len(urls)} 个资源至 qBittorrent', type='positive')
+
+            # --- 核心修复：只有当 dialog 不为 None 时才关闭 ---
+            if dialog:
+                dialog.close()
+
         except Exception as e:
-            ui.notify(f'qB 推送失败: {e}')
+            ui.notify(f'推送失败，请检查 qB 设置: {e}', type='negative')
+            print(f"qB Push Error: {e}")
 
     async def handle_search(self):
         query = self.search_input.value.strip()
         if not query: return
-        n = ui.notification('搜索 Mikan Project 中...', type='ongoing', spinner=True)
+        n = ui.notification('正在匹配官方全名...', type='ongoing', spinner=True)
         try:
             proxies = {"http": DEFAULT_PROXY, "https": DEFAULT_PROXY}
-            r = await asyncio.get_running_loop().run_in_executor(None, lambda: requests.get(
-                f"https://mikanani.me/RSS/Search?searchstr={urllib.parse.quote(query)}", proxies=proxies))
+            loop = asyncio.get_running_loop()
+
+            # 1. 请求搜索接口
+            r = await loop.run_in_executor(None, lambda: requests.get(
+                f"https://mikanani.me/RSS/Search?searchstr={urllib.parse.quote(query)}",
+                proxies=proxies, timeout=10))
             root = ET.fromstring(r.text)
-            official_name = re.sub(r'^Mikan Project - (搜索结果:)?', '', root.find(".//channel/title").text).strip()
+
+            first_item = root.find(".//item")
+            if first_item is None:
+                n.dismiss()
+                ui.notify('未找到相关资源，请尝试更精确的关键词', type='warning')
+                return
+
+            # --- 精确全名提取逻辑 ---
+            # 原始标题如: [字幕组] 阿尔涅的事件簿 / 阿尔涅事件簿 / Arne... - 03
+            item_title = first_item.find("title").text
+
+            # 正则说明: 匹配第一个方括号内容及其后的空格，捕获随后的非斜杠非中划线字符
+            # r'^\[.*?\]\s*' 匹配开头的 [字幕组]
+            # '([^/-]+)' 捕获直到出现 / 或 - 之前的文字，即为番剧名
+            match = re.search(r'^\[.*?\]\s*([^/-]+)', item_title)
+
+            if match:
+                official_name = match.group(1).strip()
+            else:
+                # 备选方案：如果正则没匹配到，尝试去掉第一个 [] 后取斜杠前的内容
+                temp_name = re.sub(r'^\[.*?\]\s*', '', item_title)
+                official_name = temp_name.split('/')[0].split('-')[0].strip()
 
             cover_url = ""
-            first_item = root.find(".//item")
-            if first_item is not None:
-                ep_url = first_item.find("link").text
-                res = await asyncio.get_running_loop().run_in_executor(None,
-                                                                       lambda: requests.get(ep_url, proxies=proxies))
-                b_match = re.search(r'/Home/Bangumi/(\d+)', res.text)
-                if b_match:
-                    b_res = await asyncio.get_running_loop().run_in_executor(None, lambda: requests.get(
-                        f"https://mikanani.me/Home/Bangumi/{b_match.group(1)}", proxies=proxies))
-                    i_match = re.search(r'/(images/Bangumi/[^\s\'"\)>]+)', b_res.text)
-                    if i_match: cover_url = "https://mikanani.me/" + i_match.group(1).lstrip('/')
+            ep_url = first_item.find("link").text
+
+            # 2. 抓取封面图 (逻辑保持不变)
+            res = await loop.run_in_executor(None, lambda: requests.get(ep_url, proxies=proxies, timeout=10))
+            b_match = re.search(r'/Home/Bangumi/(\d+)', res.text)
+            if b_match:
+                b_res = await loop.run_in_executor(None, lambda: requests.get(
+                    f"https://mikanani.me/Home/Bangumi/{b_match.group(1)}", proxies=proxies, timeout=10))
+                i_match = re.search(r'/(images/Bangumi/[^\s\'"\)>]+)', b_res.text)
+                if i_match:
+                    cover_url = "https://mikanani.me/" + i_match.group(1).lstrip('/')
 
             n.dismiss()
+            # 3. 将提取出的精确全名传递给确认弹窗
             self.show_confirm_dialog(official_name, cover_url)
+
         except Exception as e:
             n.dismiss()
             ui.notify(f'搜索失败: {e}')
+
+        except Exception as e:
+            n.dismiss()
+            ui.notify(f'搜索失败: {str(e)}')
 
     def show_confirm_dialog(self, name, cover):
         # 自动日期归档逻辑
