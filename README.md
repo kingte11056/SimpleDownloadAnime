@@ -44,7 +44,7 @@ DEFAULT_QB_PASSWORD = ''
     * `DEFAULT_QB_USERNAME/PASSWORD`: 您的 qB 登录凭据，若未设置密码可留空。
 
 ## 部署说明
-有三种方式使用  1 直接使用exe版本 2 直接执行py文件  3 直接修改代码后自定义打包
+有三种方式使用  1 直接使用exe版本（不推荐） 2 直接执行py文件（推荐）  3 直接修改代码后自定义打包
 ### 1 下载exe版本
 
 保证 有配置文件  config.json 
